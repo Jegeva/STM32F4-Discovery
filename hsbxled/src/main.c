@@ -48,6 +48,23 @@ void Delay(__IO uint32_t nCount);
   * @param  None
   * @retval None
   */
+
+
+uint32_t * heap = (uint32_t *)0x10000000;
+
+// see the  manual p 68 , this is 64k of CCM
+// we have 65536 bytes free
+// 1st 1024 bytes for the usart input
+// 2nd 1024 bytes for FFT
+// -> 1 "stick" (2 chips) -> 24 bytes
+//room for 2645 "sticks" shouldbegoodenough(TM)
+
+uint8_t * usart_temp ;
+uint8_t * stick  ;
+
+extern uint8_t * pulse_buff;
+volatile uint8_t pulse_detected;
+
 int main(void)
 {
   /*!< At this stage the microcontroller clock setting is already configured, 
@@ -58,6 +75,13 @@ int main(void)
      */
     RCC_ClocksTypeDef RCC_Clocks;
     GPIO_InitTypeDef  GPIO_InitStructure;
+
+    int i;
+    usart_temp = (uint8_t *) heap;
+    stick  =  ((uint8_t *)heap)+2048;
+
+
+
     
     /* SysTick end of count event each 1ms */
     RCC_GetClocksFreq(&RCC_Clocks);
@@ -66,55 +90,76 @@ int main(void)
     
     /* GPIOD Periph clock enable */
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-
   /* Configure PD12, PD13, PD14 and PD15 in output pushpull mode */
+    GPIOD->ODR = 0;
+    GPIOA->ODR = 0;
+    
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_13| GPIO_Pin_14| GPIO_Pin_15;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOD, &GPIO_InitStructure);
-
+  GPIOD->ODR = 0;
   
   mic_init();
   audio_output_init();
 
   usart_init();
+  GPIOA->ODR = 0;
   usart_clrscrn();
   usart_send_string("HSBXLed uart interface, Welcome");
   usart_CRLF();
 
+  ucsx912_init();
  
+  GPIOD->ODR ^= (1<<14);
+
  
+
+  
+  
+  // uint8_t stick[48];
+  
+  
+  uint8_t col_r=0;
+  uint8_t col_g=0;
+  uint8_t col_b=0;
+  
+  
+  GPIOD->ODR ^= (1<<14);
+  
   while (1)
   {
-         
-      // PD12 to be toggled 
-   
-      /*
-      // PD13 to be toggled 
-    GPIO_SetBits(GPIOD, GPIO_Pin_13);
-    
-    // Insert delay 
-    Delay(500);
-  
-    // PD14 to be toggled 
-    GPIO_SetBits(GPIOD, GPIO_Pin_14);
-    
-    // Insert delay 
-    Delay(500);
-    
-    // PD15 to be toggled 
-    GPIO_SetBits(GPIOD, GPIO_Pin_15);
-    
-    // Insert delay 
-    Delay(1000);
-    
-    GPIO_ResetBits(GPIOD, GPIO_Pin_12|GPIO_Pin_13|GPIO_Pin_14|GPIO_Pin_15);
-    
-    // Insert delay 
-    Delay(500);
+      if(pulse_detected){
+	  memset(usart_temp,0,7);
+	  pulse_detected=0;
+	  /* for(i=0;i<FREQUENCY_BUCKETS;i++){
+	      *(usart_temp+i)='A'+((pulse_buff[i]>0)?1:0);
+	  }
+	  */
+	   GPIOD->ODR ^= (1<<14);
+//	  usart_send_string(usart_temp);
+//	  usart_CRLF();	  
+      }
+      
+      
+      /*   Delay(100);
+
+      for(i=0;i<16;i++){
+	  stick[i*3]=col_r;
+	  stick[i*3+1]=0;//col_r;
+	  stick[i*3+2]=0;//col_r;  	  
+      }
+      ucsx912_senddata(stick,48);
+      col_r+=10;
       */
+      /*     if(col_r == 255){
+	  col_g++;
+	  if(col_g == 255){
+	      col_b++;
+	  }
+	  }*/
   }
 }
 

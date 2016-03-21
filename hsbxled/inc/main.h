@@ -27,6 +27,7 @@
 #include "stm32f4_discovery.h"
 #include "usart.h"
 #include "audio_output.h"
+#include "ucsx912.h"
 #include "mic.h"
 #include "arm_math.h"
 /* Exported types ------------------------------------------------------------*/
@@ -39,6 +40,10 @@
 
 /* Exported functions ------------------------------------------------------- */
 void TimingDelay_Decrement(void);
+
+#define FREQUENCY_BUCKETS 6
+#define SLIDING_HISTORY 10
+
 
 #endif /* __MAIN_H */
 

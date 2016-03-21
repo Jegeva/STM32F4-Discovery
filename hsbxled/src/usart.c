@@ -122,8 +122,9 @@ void usart_init(void)
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);       
     GPIO_PinAFConfig(PORT_USART2,PIN_USART2_RX_Source,GPIO_AF_USART2 );
     GPIO_PinAFConfig(PORT_USART2,PIN_USART2_TX_Source,GPIO_AF_USART2 );
+
     GPIO_Init(PORT_USART2, &GPIO_InitStructure);
-   
+    GPIOA->ODR = 0;   
     USART_Init(USART2, &USART_InitStruct);
     USART_ClockInit(USART2, &USART_ClockInitStruct);
     

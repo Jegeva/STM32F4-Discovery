@@ -1,11 +1,11 @@
 # put your *.o targets here, make should handle the rest!
 
-SRCS = stm32f4xx_it.c system_stm32f4xx.c usart.c main.c mic.c audio_output.c
+SRCS = stm32f4xx_it.c system_stm32f4xx.c usart.c main.c mic.c audio_output.c ucsx912.c
 
 # all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
 
 PROJ_NAME=main
-FLASH_SIZE = 262144
+FLASH_SIZE =1048576
 # that's it, no need to change anything below this line!
 
 ###################################################
@@ -51,11 +51,12 @@ pdm_filter:
 proj: 	$(PROJ_NAME).elf
 
 $(PROJ_NAME).elf: $(SRCS)
-	$(CC) $(CFLAGS) $^ -o $@ -fdata-sections -ffunction-sections -L PDM_filter -L../STM32F4-Discovery_lib -L../../CMSIS/Lib/GCC/ -lstm32f4_discovery -lpdm_filter -larm_cortexM4lf_math  -Wl,--gc-sections
+	$(CC) $(CFLAGS) $^ -o $@ -fdata-sections -ffunction-sections -L PDM_filter -L../STM32F4-Discovery_lib -L../../CMSIS/DSP_Lib/Lib/ -lstm32f4_discovery -lpdm_filter -larm_cortexM4lf_math -lm -Wl,--gc-sections
 	$(OBJCOPY) -O ihex $(PROJ_NAME).elf $(PROJ_NAME).hex
 	$(OBJCOPY) -O binary $(PROJ_NAME).elf $(PROJ_NAME).bin
 	$(SIZE) $(PROJ_NAME).elf
-	perl -e 'printf "\n%0.2f%%\n",100*('$(FLASH_SIZE)'/(100*'`ls -l main.bin |cut -d' ' -f5`')) '
+	@perl -e 'printf "\nUsage : %0.2f%%\n",100*('`ls -l main.bin |cut -d' ' -f5`'/'$(FLASH_SIZE)');'
+
 prog: 
 	st-flash write $(PROJ_NAME).bin 0x8000000
 
@@ -63,7 +64,12 @@ gdb :
 	openocd --file /usr/share/openocd/scripts/board/stm32f4discovery.cfg  &
 	sleep 1
 	echo "target extended localhost:3333\nmonitor reset halt\nmonitor reset_nag enable\nb "$(B)"\nset directories ../STM32F4-Discovery_lib/src\nc\n" >.gdbinit
-	arm-none-eabi-gdb main.elf && killall openocd
+	gdb-multiarch main.elf && killall openocd
+gdbr :
+	openocd --file /usr/share/openocd/scripts/board/stm32f4discovery.cfg  &
+	sleep 1
+	echo "target extended localhost:3333\nmonitor reset halt\nmonitor reset_nag enable\nb NMI_Handler\nb HardFault_Handler\nb MemManage_Handler\nb BusFault_Handler\nb UsageFault_Handler\nset directories ../STM32F4-Discovery_lib/src\nc\n" >.gdbinit
+	gdb-multiarch main.elf && killall openocd
 clean:
 	rm -f *.o
 	rm -f $(PROJ_NAME).elf
@@ -71,5 +77,6 @@ clean:
 	rm -f $(PROJ_NAME).bin
 
 allclean: clean
-	make -C ../STM32F4-Discovery_lib/ clean
-	make -C ./PDM_filter clean
+	$(MAKE) -C ../STM32F4-Discovery_lib/ clean
+	$(MAKE) -C ../../CMSIS/DSP_Lib/ clean
+	$(MAKE) -C ./PDM_filter clean
